@@ -12,6 +12,42 @@ export class UserController {
     this.userService = new UserService();
   }
 
+  public login = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        res.status(400).json({
+          success: false,
+          message: "Email is required",
+        });
+        return;
+      }
+
+      // Check if user exists in our allowed users
+      const user = await this.userService.getUserByEmail(email);
+      if (!user) {
+        res.status(401).json({
+          success: false,
+          message: "Unauthorized access. This is a private website.",
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        message: "Login successful",
+        data: user,
+      });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  };
+
   public createUser = async (req: Request, res: Response): Promise<void> => {
     try {
       const { error } = validateCreateUser(req.body);

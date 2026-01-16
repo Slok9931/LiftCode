@@ -4,6 +4,9 @@ import { UserController } from "../controllers/userController";
 const router = Router();
 const userController = new UserController();
 
+// POST /api/users/login - Login with email
+router.post("/login", userController.login);
+
 // GET /api/users - Get all users
 router.get("/", userController.getAllUsers);
 
