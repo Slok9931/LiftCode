@@ -7,8 +7,10 @@
         "start": "node dist/index.js",
         "dev": "nodemon src/index.ts",
         "build": "tsc",
+        "migrate": "ts-node src/scripts/migrate.ts",
         "seed": "ts-node src/scripts/seedUsers.ts",
-        "seed:exercises": "ts-node src/scripts/seedExercises.ts"
+        "seed:exercises": "ts-node src/scripts/seedExercises.ts",
+        "seed:sets": "ts-node src/scripts/seedSets.ts"
     },
     "keywords": [
         "express",

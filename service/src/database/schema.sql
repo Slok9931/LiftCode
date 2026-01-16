@@ -66,3 +66,103 @@ CREATE TRIGGER update_exercises_updated_at
     BEFORE UPDATE ON exercises
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
+-- Create workout sessions table (optional for grouping sets)
+CREATE TABLE IF NOT EXISTS workout_sessions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(255), -- Optional workout name
+    date DATE NOT NULL DEFAULT CURRENT_DATE,
+    start_time TIMESTAMP,
+    end_time TIMESTAMP,
+    duration_minutes INTEGER GENERATED ALWAYS AS (
+        CASE 
+            WHEN start_time IS NOT NULL AND end_time IS NOT NULL 
+            THEN EXTRACT(EPOCH FROM (end_time - start_time))/60 
+            ELSE NULL 
+        END
+    ) STORED,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for workout sessions
+CREATE INDEX IF NOT EXISTS idx_workout_sessions_user_id ON workout_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_workout_sessions_date ON workout_sessions(date);
+CREATE INDEX IF NOT EXISTS idx_workout_sessions_created_at ON workout_sessions(created_at);
+
+-- Create trigger for workout_sessions updated_at
+DROP TRIGGER IF EXISTS update_workout_sessions_updated_at ON workout_sessions;
+CREATE TRIGGER update_workout_sessions_updated_at
+    BEFORE UPDATE ON workout_sessions
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Create sets table
+CREATE TABLE IF NOT EXISTS sets (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    workout_session_id INTEGER REFERENCES workout_sessions(id) ON DELETE SET NULL,
+    set_number INTEGER NOT NULL CHECK (set_number > 0),
+    set_type VARCHAR(20) NOT NULL CHECK (set_type IN ('normal', 'dropset', 'superset')),
+    
+    -- Exercise information (for normal and dropset: single exercise, for superset: primary exercise)
+    exercise_id INTEGER NOT NULL REFERENCES exercises(id) ON DELETE CASCADE,
+    
+    -- Superset second exercise (only used when set_type = 'superset')
+    superset_exercise_id INTEGER REFERENCES exercises(id) ON DELETE CASCADE,
+    
+    -- Weight information (stored as JSON for flexibility)
+    -- Normal/Dropset: {"primary": 135.5} 
+    -- Superset: {"primary": 135.5, "secondary": 50.0}
+    weight JSONB NOT NULL,
+    
+    -- Reps information (stored as JSON for flexibility)  
+    -- Normal: {"primary": 12}
+    -- Dropset: {"primary": 8} (initial reps before drop)
+    -- Superset: {"primary": 12, "secondary": 15}
+    reps JSONB NOT NULL,
+    
+    -- Dropset specific information
+    drop_weight DECIMAL(6,2) CHECK (drop_weight >= 0), -- Weight after drop (for dropsets)
+    drop_reps INTEGER CHECK (drop_reps > 0), -- Reps after drop (for dropsets)
+    
+    -- Additional information
+    note TEXT, -- User notes about the set
+    completed BOOLEAN DEFAULT true, -- Whether the set was completed as planned
+    
+    -- Metadata
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for sets table
+CREATE INDEX IF NOT EXISTS idx_sets_user_id ON sets(user_id);
+CREATE INDEX IF NOT EXISTS idx_sets_exercise_id ON sets(exercise_id);
+CREATE INDEX IF NOT EXISTS idx_sets_superset_exercise_id ON sets(superset_exercise_id);
+CREATE INDEX IF NOT EXISTS idx_sets_workout_session ON sets(workout_session_id);
+CREATE INDEX IF NOT EXISTS idx_sets_type ON sets(set_type);
+CREATE INDEX IF NOT EXISTS idx_sets_created_at ON sets(created_at);
+CREATE INDEX IF NOT EXISTS idx_sets_user_exercise ON sets(user_id, exercise_id);
+
+-- Create trigger for sets updated_at
+DROP TRIGGER IF EXISTS update_sets_updated_at ON sets;
+CREATE TRIGGER update_sets_updated_at
+    BEFORE UPDATE ON sets
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Add constraint to ensure superset_exercise_id is only set when set_type = 'superset'
+ALTER TABLE sets ADD CONSTRAINT check_superset_exercise 
+    CHECK (
+        (set_type = 'superset' AND superset_exercise_id IS NOT NULL) OR 
+        (set_type != 'superset' AND superset_exercise_id IS NULL)
+    );
+
+-- Add constraint to ensure drop_weight and drop_reps are only set when set_type = 'dropset'
+ALTER TABLE sets ADD CONSTRAINT check_dropset_fields 
+    CHECK (
+        (set_type = 'dropset' AND (drop_weight IS NOT NULL OR drop_reps IS NOT NULL)) OR 
+        (set_type != 'dropset' AND drop_weight IS NULL AND drop_reps IS NULL)
+    );
