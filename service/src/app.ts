@@ -60,6 +60,7 @@ class App {
         endpoints: {
           health: "/api/health",
           users: "/api/users",
+          exercises: "/api/exercises",
         },
       });
     });
@@ -78,6 +79,9 @@ class App {
       console.log(`🚀 LiftCode API is running on port ${this.port}`);
       console.log(`📊 Health check: http://localhost:${this.port}/api/health`);
       console.log(`👥 Users API: http://localhost:${this.port}/api/users`);
+      console.log(
+        `💪 Exercises API: http://localhost:${this.port}/api/exercises`
+      );
       console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
     });
   }
