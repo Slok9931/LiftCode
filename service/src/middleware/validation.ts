@@ -201,7 +201,7 @@ export const validateCreateSet = (data: any) => {
         "number.positive": "Drop reps must be positive",
         "any.unknown": "Drop reps should only be provided for dropsets",
       }),
-    note: Joi.string().max(500).optional().messages({
+    note: Joi.string().max(500).allow("").optional().messages({
       "string.max": "Note must not exceed 500 characters",
     }),
     completed: Joi.boolean().optional(),
@@ -262,7 +262,7 @@ export const validateUpdateSet = (data: any) => {
       "number.base": "Drop reps must be a number",
       "number.positive": "Drop reps must be positive",
     }),
-    note: Joi.string().max(500).optional().messages({
+    note: Joi.string().max(500).allow("").optional().messages({
       "string.max": "Note must not exceed 500 characters",
     }),
     completed: Joi.boolean().optional(),
